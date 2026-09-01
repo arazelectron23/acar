@@ -1,11 +1,11 @@
 const CACHE_NAME = 'usta-acar-v1';
 const assetsToCache = [
-    '/',
-    '/index.html',
-    '/style.css',
-    '/app.js',
-    '/firebase.js',
-    '/favicon.png'
+    './',
+    './index.html',
+    './style.css',
+    './app.js',
+    './firebase.js',
+    './favicon.png'
 ];
 
 // Quraşdırma mərhələsi
