@@ -375,3 +375,41 @@ header p {
     object-fit: contain;
     border-radius: 8px;
 }
+
+.brand-input-container {
+    position: relative;
+    width: 100%;
+}
+
+.suggestions-box {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 0 0 8px 8px;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 99;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.suggestion-item {
+    padding: 10px 15px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid #2a2a2a;
+    transition: background 0.2s;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover, .suggestion-item.active {
+    background-color: #2c2c2c;
+    color: #ffc107;
+}

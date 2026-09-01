@@ -261,3 +261,76 @@ function openModal(modalElement) {
     history.pushState({ modalOpen: true }, "");
     modalElement.classList.add('active');
 }
+
+const chipsInput = document.getElementById('chipsInput');
+
+// Çip inputuna fokuslananda (klikləndikdə) əgər boşdursa avtomatik "ID" yazır
+chipsInput.addEventListener('focus', () => {
+    if (!chipsInput.value.startsWith("ID")) {
+        chipsInput.value = "ID" + chipsInput.value;
+    }
+});
+
+// İstifadəçi yazmağa başlayarkən "ID" sözünün silinməsinin qarşısını alır və ya tənzimləyir
+chipsInput.addEventListener('input', (e) => {
+    if (!chipsInput.value.toUpperCase().startsWith("ID")) {
+        chipsInput.value = "ID" + chipsInput.value.replace(/[^0-9]/g, '');
+    }
+});
+
+// İstədiyiniz markaları burada artırıb/azalda bilərsiniz
+const popularBrands = [
+    "Toyota", "Hyundai", "Kia", "Mercedes", "BMW", 
+    "Chevrolet", "Nissan", "Ford", "Volkswagen", "Renault", 
+    "Lada", "Mitsubishi", "Honda", "Mazda", "Subaru", "Lexus", "Audi"
+];
+
+const brandInput = document.getElementById('brandInput');
+const brandSuggestions = document.getElementById('brandSuggestions');
+
+// Marka inputuna yazdıqda və ya fokuslandıqda işləyir
+brandInput.addEventListener('input', () => {
+    const value = brandInput.value.toLowerCase();
+    brandSuggestions.innerHTML = "";
+
+    if (!value) {
+        brandSuggestions.style.display = "none";
+        return;
+    }
+
+    const filteredBrands = popularBrands.filter(brand => 
+        brand.toLowerCase().includes(value)
+    );
+
+    if (filteredBrands.length > 0) {
+        filteredBrands.forEach(brand => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.textContent = brand;
+            
+            item.addEventListener('click', () => {
+                brandInput.value = brand;
+                brandSuggestions.style.display = "none";
+            });
+
+            brandSuggestions.appendChild(item);
+        });
+        brandSuggestions.style.display = "block";
+    } else {
+        brandSuggestions.style.display = "none";
+    }
+});
+
+// Inputdan fokus gedəndə siyahını bağlamaq (klikləməyə imkan vermək üçün gecikmə ilə)
+brandInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        brandSuggestions.style.display = "none";
+    }, 200);
+});
+
+// Fokuslananda əgər mətn varsa yenidən göstər
+brandInput.addEventListener('focus', () => {
+    if (brandInput.value) {
+        brandInput.dispatchEvent(new Event('input'));
+    }
+});
