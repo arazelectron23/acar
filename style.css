@@ -240,12 +240,21 @@ header p {
 }
 
 .large-note-input {
-    min-height: 80px;
-    border-color: #3b3b3b;
+    width: 100%;
+    min-height: 120px;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border: 1px solid #333333;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 15px;
+    resize: vertical;
+    box-sizing: border-box;
 }
 
-#addKeyForm input:focus, #addKeyForm textarea:focus {
-    border-color: var(--accent-color);
+.large-note-input:focus {
+    border-color: #555555;
+    outline: none;
 }
 
 .modal-buttons {
@@ -271,8 +280,8 @@ header p {
 }
 
 .btn-edit {
-    background-color: #ffc107;
-    color: #000;
+    background-color: #ff6a00;
+    color: #fff;
 }
 
 .btn-delete {
@@ -412,4 +421,103 @@ header p {
 .suggestion-item:hover, .suggestion-item.active {
     background-color: #2c2c2c;
     color: #ffc107;
+}
+
+#toastContainer {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.toast-message {
+    background-color: #333;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(20px);
+    pointer-events: none;
+    border: 1px solid #444;
+}
+
+.toast-message.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-message.success {
+    background-color: #1b4d3e;
+    border-color: #2e7d32;
+    color: #81c784;
+}
+
+.toast-message.error {
+    background-color: #5c1d1d;
+    border-color: #c62828;
+    color: #e57373;
+}
+
+.note-edit-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: #222;
+    border: 1px solid #444;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.note-edit-icon:hover {
+    background-color: #333;
+    border-color: #666;
+}
+
+.large-note-input::-webkit-resizer {
+    background-color: #444;
+    border-radius: 4px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Yüklənmə (loading) düymə effekti */
+.btn-loading {
+    color: transparent !important;
+    pointer-events: none;
+    position: relative;
+}
+
+.btn-loading::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #ffffff;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
