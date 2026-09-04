@@ -169,21 +169,40 @@ header p {
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 15px;
+    padding: 10px;
+    overflow-y: auto;
 }
 
 .modal-overlay.active {
     display: flex;
 }
 
+/* JavaScript vasitəsilə klaviatura açıldıqda aktivləşir */
+.modal-overlay.keyboard-open {
+    align-items: flex-start !important;
+    padding-top: 15px;
+}
+
 .modal-content {
     background-color: var(--card-bg);
     width: 100%;
     max-width: 400px;
-    padding: 20px;
+    max-height: 85dvh;
+    padding: 15px;
     border-radius: 14px;
     border: 1px solid var(--border-color);
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* Klaviatura açıq olanda modalın hündürlüyü kiçilir */
+.modal-overlay.keyboard-open .modal-content {
+    max-height: 50dvh;
+    margin-top: 0;
+    margin-bottom: auto;
 }
 
 .modal-content h2 {
@@ -201,14 +220,19 @@ header p {
 
 #addKeyForm input, #addKeyForm textarea {
     width: 100%;
-    padding: 10px 12px;
-    background-color: #121212;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    padding: 12px 15px;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
     color: var(--primary-color);
-    font-size: 14px;
+    font-size: 15px;
     outline: none;
     resize: none;
+    transition: border-color 0.3s;
+}
+
+#addKeyForm input:focus, #addKeyForm textarea:focus {
+    border-color: var(--accent-color);
 }
 
 .image-input-group {
@@ -241,7 +265,7 @@ header p {
 
 .large-note-input {
     width: 100%;
-    min-height: 120px;
+    min-height: 150px;
     background-color: #1a1a1a;
     color: #ffffff;
     border: 1px solid #333333;
@@ -285,7 +309,7 @@ header p {
 }
 
 .btn-delete {
-    background-color: #dc3545;
+    background-color: #ff0000;
     color: white;
 }
 
@@ -425,7 +449,7 @@ header p {
 
 #toastContainer {
     position: fixed;
-    bottom: 20px;
+    top: 20px; /* Aşağıdan yuxarıya daşındı */
     left: 50%;
     transform: translateX(-50%);
     z-index: 9999;
@@ -436,17 +460,18 @@ header p {
 }
 
 .toast-message {
-    background-color: #333;
     color: #fff;
     padding: 12px 20px;
     border-radius: 8px;
     font-size: 14px;
+    font-weight: 600;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     opacity: 0;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    transform: translateY(20px);
+    transform: translateY(-20px); /* Yuxarıdan gəlməsi üçün */
     pointer-events: none;
-    border: 1px solid #444;
+    border: none;
+    text-align: center;
 }
 
 .toast-message.show {
@@ -454,16 +479,16 @@ header p {
     transform: translateY(0);
 }
 
+/* Uğurlu əməliyyatlar üçün dolu yaşıl rəng */
 .toast-message.success {
-    background-color: #1b4d3e;
-    border-color: #2e7d32;
-    color: #81c784;
+    background-color: #2e7d32 !important; 
+    color: #ffffff !important;
 }
 
+/* Xəta və səhvlər üçün dolu qırmızı rəng */
 .toast-message.error {
-    background-color: #5c1d1d;
-    border-color: #c62828;
-    color: #e57373;
+    background-color: #d32f2f !important; 
+    color: #ffffff !important;
 }
 
 .note-edit-icon {
@@ -521,3 +546,101 @@ header p {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.brand-filter-container {
+    padding: 0;
+    margin-bottom: 15px;
+}
+
+.brand-filter-btn {
+    width: 100%;
+    padding: 12px 15px;
+    background-color: #2a2a2a;
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: border-color 0.3s, background-color 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.brand-filter-btn:hover {
+    border-color: var(--accent-color);
+    background-color: #252525;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-color, #fff);
+    pointer-events: none;
+    font-size: 11px;
+}
+
+/* Seçilmiş markanın kənarlığını göy edən klass */
+.brand-item-btn.selected {
+    border: 2px solid #3b82f6 !important; /* Göy kənarlıq */
+    color: #3b82f6; /* İstəyə görə mətn rəngini də göy edə bilərsiniz */
+}
+
+#addBrandForm {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+}
+
+#addBrandForm input {
+    flex: 1;
+    height: 45px;
+    padding: 0 5px;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--primary-color);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#addBrandForm input:focus {
+    border-color: var(--accent-color);
+}
+
+#addBrandForm button {
+    height: 45px;
+    padding: 0 10px;
+    white-space: nowrap;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+#brandAddModal .modal-content {
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#existingBrandsList {
+    max-height: 250px !important;
+}
+
+#brandAddModal .modal-content, #editBrandModal .modal-content {
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+textarea {
+    resize: vertical; /* Yalnız şaquli istiqamətdə böyüməyə icazə verir */
+    min-height: 120px; /* Başlanğıc hündürlüyünü bir az da artırır ki, əvvəlcədən böyük olsun */
+}
+

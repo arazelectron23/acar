@@ -27,8 +27,17 @@ const detailNote = document.getElementById('detailNote');
 const detailNoteContainer = document.getElementById('detailNoteContainer');
 const editKeyBtn = document.getElementById('editKeyBtn');
 const deleteKeyBtn = document.getElementById('deleteKeyBtn');
+let selectedBrandFilter = null;
+const filterByBrandBtn = document.getElementById('filterByBrandBtn');
+const brandSelectModal = document.getElementById('brandSelectModal');
+const brandSelectList = document.getElementById('brandSelectList');
+const clearBrandFilter = document.getElementById('clearBrandFilter');
+const keyBrandSelectModal = document.getElementById('keyBrandSelectModal');
+const keyBrandSelectList = document.getElementById('keyBrandSelectList');
+const brandSearchInput = document.getElementById('brandSearchInput');
+const filterBrandSearchInput = document.getElementById('filterBrandSearchInput');
 
-// Toast Bildiriş Sistemi (Alert və Confirm əvəzinə)
+// Toast Bildiriş Sistemi
 function showNotification(message, type = 'success') {
     let notifContainer = document.getElementById('toastContainer');
     if (!notifContainer) {
@@ -52,8 +61,7 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Xüsusi Təsdiq Pəncərəsi (Confirm əvəzinə)
-// Xüsusi Təsdiq Pəncərəsi (Geri düyməsi dəstəyi ilə)
+// Xüsusi Təsdiq Pəncərəsi
 function showConfirm(message, onConfirm) {
     let overlay = document.getElementById('customConfirmOverlay');
     if (overlay) overlay.remove();
@@ -67,8 +75,8 @@ function showConfirm(message, onConfirm) {
         <div class="modal-content" style="text-align: center;">
             <h2 style="font-size: 16px; margin-bottom: 20px;">${message}</h2>
             <div style="display: flex; gap: 10px;">
+            <button id="confirmNo" class="btn-save" style="flex: 1; padding: 10px; background-color: #333;">Xeyr</button>
                 <button id="confirmYes" class="btn-delete" style="flex: 1; padding: 10px;">Bəli</button>
-                <button id="confirmNo" class="btn-save" style="flex: 1; padding: 10px; background-color: #333;">Xeyr</button>
             </div>
         </div>
     `;
@@ -128,7 +136,7 @@ async function fetchKeysFromFirebase() {
 }
 
 function displayKeys(keys) {
-    keyContainer.innerHTML = "";
+   keyContainer.innerHTML = "";
     if (keys.length === 0) {
         keyContainer.innerHTML = `<div class="no-result">Açar tapılmadı...</div>`;
         return;
@@ -166,18 +174,36 @@ function displayKeys(keys) {
 }
 
 function filterKeys() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const filtered = carKeys.filter(key => 
-        key.brand.toLowerCase().includes(searchTerm) || 
-        key.model.toLowerCase().includes(searchTerm) ||
-        (key.chips && key.chips.toLowerCase().includes(searchTerm)) ||
-        key.years.toLowerCase().includes(searchTerm) ||
-        (key.note && key.note.toLowerCase().includes(searchTerm))
-    );
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const filtered = carKeys.filter(key => {
+        const matchesSearch = 
+            key.brand.toLowerCase().includes(searchTerm) || 
+            key.model.toLowerCase().includes(searchTerm) ||
+            (key.chips && key.chips.toLowerCase().includes(searchTerm)) ||
+            key.years.toLowerCase().includes(searchTerm) ||
+            (key.note && key.note.toLowerCase().includes(searchTerm));
+        
+        const matchesBrand = selectedBrandFilter ? key.brand.trim().toLowerCase() === selectedBrandFilter.trim().toLowerCase() : true;
+
+        return matchesSearch && matchesBrand;
+    });
     displayKeys(filtered);
 }
 
-// Fayl seçimi (ImgBB inteqrasiyası ilə)
+filterByBrandBtn.addEventListener('click', async () => {
+    filterBrandSearchInput.value = ""; 
+    await fetchBrandsFromFirebase();
+    setupBrandFilterList();
+    
+    if (selectedBrandFilter) {
+        clearBrandFilter.style.display = "block";
+    } else {
+        clearBrandFilter.style.display = "none";
+    }
+    
+    openModal(brandSelectModal);
+});
+
 imageFileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -192,7 +218,6 @@ imageFileInput.addEventListener('change', async (e) => {
     }
 });
 
-// Kamera çəkilişi (ImgBB inteqrasiyası ilə)
 cameraInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -208,13 +233,7 @@ cameraInput.addEventListener('change', async (e) => {
 });
 
 openModalBtn.addEventListener('click', () => {
-    modalTitle.textContent = "Yeni Açar Əlavə Et";
-    saveBtnText.textContent = "Yadda Saxla";
-    editKeyIdInput.value = "";
-    addKeyForm.reset();
-    imageFileInput.value = "";
-    cameraInput.value = "";
-    openModal(keyModal);
+    openModal(choiceModal);
 });
 
 editKeyBtn.addEventListener('click', () => {
@@ -233,17 +252,17 @@ editKeyBtn.addEventListener('click', () => {
     modalTitle.textContent = "Açarı Redaktə Et";
     saveBtnText.textContent = "Yenilə";
 
-    detailModal.classList.remove('active');
+    closeModal(detailModal);
     openModal(keyModal);
 });
 
 deleteKeyBtn.addEventListener('click', () => {
     if (!currentSelectedKeyId) return;
 
-    showConfirm("Bu açarı bazadan silmək istədiyinizə əminsinizmi?", async () => {
+    showConfirm("Təsdiqlə!", async () => {
         try {
             await deleteDoc(doc(db, "carKeys", currentSelectedKeyId));
-            detailModal.classList.remove('active');
+            closeModal(detailModal);
             showNotification("Açar uğurla silindi!", "success");
             await fetchKeysFromFirebase();
         } catch (error) {
@@ -295,7 +314,7 @@ addKeyForm.addEventListener('submit', async (e) => {
         }
 
         addKeyForm.reset();
-        keyModal.classList.remove('active');
+        closeModal(keyModal);
         await fetchKeysFromFirebase();
     } catch (error) {
         console.error("Firebase xətası: ", error);
@@ -310,11 +329,11 @@ searchInput.addEventListener('keyup', filterKeys);
 fetchKeysFromFirebase();
 
 keyModal.addEventListener('click', (e) => {
-    if (e.target === keyModal) keyModal.classList.remove('active');
+    if (e.target === keyModal) closeModal(keyModal);
 });
 
 detailModal.addEventListener('click', (e) => {
-    if (e.target === detailModal) detailModal.classList.remove('active');
+    if (e.target === detailModal) closeModal(detailModal);
 });
 
 const imageModal = document.getElementById('imageModal');
@@ -326,7 +345,7 @@ detailImage.addEventListener('click', () => {
 });
 
 imageModal.addEventListener('click', (e) => {
-    if (e.target === imageModal) imageModal.classList.remove('active');
+    if (e.target === imageModal) closeModal(imageModal);
 });
 
 window.addEventListener('popstate', () => {
@@ -334,75 +353,43 @@ window.addEventListener('popstate', () => {
     if (confirmOverlay) {
         confirmOverlay.remove();
     } else if (typeof noteModal !== 'undefined' && noteModal.classList.contains('active')) {
-        noteModal.classList.remove('active');
+        closeModal(noteModal);
     } else if (imageModal.classList.contains('active')) {
-        imageModal.classList.remove('active');
+        closeModal(imageModal);
     } else if (detailModal.classList.contains('active')) {
-        detailModal.classList.remove('active');
+        closeModal(detailModal);
+    } else if (brandSelectModal.classList.contains('active')) {
+        closeModal(brandSelectModal);
+    } else if (keyBrandSelectModal.classList.contains('active')) {
+        closeModal(keyBrandSelectModal);
     } else if (keyModal.classList.contains('active')) {
-        keyModal.classList.remove('active');
+        closeModal(keyModal);
+    } else if (choiceModal.classList.contains('active')) {
+        closeModal(choiceModal);
+    } else if (brandAddModal.classList.contains('active')) {
+        closeModal(brandAddModal);
+    } else if (editBrandModal.classList.contains('active')) {
+        closeModal(editBrandModal);
     }
 });
 
 function openModal(modalElement) {
+    if (!modalElement) return;
     history.pushState({ modalOpen: true }, "");
     modalElement.classList.add('active');
 }
 
-// Marka Avtomatik Tamamlama
-const popularBrands = [
-    "Toyota", "Hyundai", "Kia", "Mercedes", "BMW", 
-    "Chevrolet", "Nissan", "Ford", "Volkswagen", "Renault", 
-    "Lada", "Mitsubishi", "Honda", "Mazda", "Subaru", "Lexus", "Audi"
-];
-
-const brandInput = document.getElementById('brandInput');
-const brandSuggestions = document.getElementById('brandSuggestions');
-
-brandInput.addEventListener('input', () => {
-    const value = brandInput.value.toLowerCase();
-    brandSuggestions.innerHTML = "";
-
-    if (!value) {
-        brandSuggestions.style.display = "none";
-        return;
+function closeModal(modalElement) {
+    if (modalElement) {
+        modalElement.classList.remove('active');
     }
-
-    const filteredBrands = popularBrands.filter(brand => 
-        brand.toLowerCase().includes(value)
-    );
-
-    if (filteredBrands.length > 0) {
-        filteredBrands.forEach(brand => {
-            const item = document.createElement('div');
-            item.className = 'suggestion-item';
-            item.textContent = brand;
-            item.addEventListener('click', () => {
-                brandInput.value = brand;
-                brandSuggestions.style.display = "none";
-            });
-            brandSuggestions.appendChild(item);
-        });
-        brandSuggestions.style.display = "block";
-    } else {
-        brandSuggestions.style.display = "none";
-    }
-});
-
-brandInput.addEventListener('blur', () => {
-    setTimeout(() => { brandSuggestions.style.display = "none"; }, 200);
-});
-
-brandInput.addEventListener('focus', () => {
-    if (brandInput.value) brandInput.dispatchEvent(new Event('input'));
-});
+}
 
 const noteModal = document.getElementById('noteModal');
 const openNoteModalBtn = document.getElementById('openNoteModalBtn');
 const editNoteForm = document.getElementById('editNoteForm');
 const quickNoteInput = document.getElementById('quickNoteInput');
 
-// Qələm işarəsinə kliklədikdə qeyd modalını açır
 openNoteModalBtn.addEventListener('click', () => {
     const keyData = carKeys.find(k => k.id === currentSelectedKeyId);
     if (!keyData) return;
@@ -411,14 +398,12 @@ openNoteModalBtn.addEventListener('click', () => {
     openModal(noteModal);
 });
 
-// Qeyd modalının kənarına kliklədikdə bağlayır
 noteModal.addEventListener('click', (e) => {
     if (e.target === noteModal) {
-        noteModal.classList.remove('active');
+        closeModal(noteModal);
     }
 });
 
-// Qeydi birbaşa Firebase-də yeniləyir
 editNoteForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentSelectedKeyId) return;
@@ -433,11 +418,9 @@ editNoteForm.addEventListener('submit', async (e) => {
         const keyRef = doc(db, "carKeys", currentSelectedKeyId);
         await updateDoc(keyRef, { note: newNoteVal });
 
-        // Yerli massivi də yeniləyirik ki, səhifəni yenidən yükləməyə ehtiyac qalmasın
         const keyData = carKeys.find(k => k.id === currentSelectedKeyId);
         if (keyData) keyData.note = newNoteVal;
 
-        // Detal modalındakı qeyd görünüşünü yeniləyirik
         if (newNoteVal !== "") {
             detailNote.textContent = newNoteVal;
             detailNoteContainer.style.display = "block";
@@ -445,7 +428,7 @@ editNoteForm.addEventListener('submit', async (e) => {
             detailNoteContainer.style.display = "none";
         }
 
-        noteModal.classList.remove('active');
+        closeModal(noteModal);
         showNotification("Qeyd uğurla yeniləndi!", "success");
         await fetchKeysFromFirebase();
     } catch (error) {
@@ -457,7 +440,6 @@ editNoteForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Şəkli ImgBB-yə yükləyən funksiya
 async function uploadImageToImgBB(file) {
     const apiKey = "4051df84ed1e0dbe5f13f79db310ca45";
     const formData = new FormData();
@@ -480,3 +462,281 @@ async function uploadImageToImgBB(file) {
         throw error;
     }
 }
+
+const choiceModal = document.getElementById('choiceModal');
+const chooseAddBrand = document.getElementById('chooseAddBrand');
+const chooseAddKey = document.getElementById('chooseAddKey');
+const brandAddModal = document.getElementById('brandAddModal');
+const addBrandForm = document.getElementById('addBrandForm');
+const newBrandInput = document.getElementById('newBrandInput');
+const editBrandModal = document.getElementById('editBrandModal');
+
+let carBrands = [];
+
+async function fetchBrandsFromFirebase() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "carBrands"));
+        carBrands = [];
+        querySnapshot.forEach((doc) => {
+            carBrands.push({ id: doc.id, ...doc.data() });
+        });
+    } catch (error) {
+        console.error("Markalar oxunarkən xəta: ", error);
+    }
+}
+
+chooseAddBrand.addEventListener('click', async () => {
+    closeModal(choiceModal);
+    newBrandInput.value = "";
+    await fetchBrandsFromFirebase();
+    renderExistingBrandsInModal();
+    openModal(brandAddModal);
+});
+
+chooseAddKey.addEventListener('click', () => {
+    closeModal(choiceModal);
+    
+    modalTitle.textContent = "Yeni Açar Əlavə Et";
+    saveBtnText.textContent = "Yadda Saxla";
+    editKeyIdInput.value = "";
+    addKeyForm.reset();
+    imageFileInput.value = "";
+    cameraInput.value = "";
+    openModal(keyModal);
+
+    fetchBrandsFromFirebase().then(() => {
+        setupKeyBrandSelectList();
+    });
+});
+
+addBrandForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const brandName = newBrandInput.value.trim();
+    if (!brandName) return;
+
+    const brandExists = carBrands.some(b => b.name.toLowerCase() === brandName.toLowerCase());
+    if (brandExists) {
+        showNotification("Bu marka artıq mövcuddur!", "error");
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, "carBrands"), { name: brandName });
+        showNotification("Marka uğurla əlavə olundu!", "success");
+        await fetchBrandsFromFirebase();
+        renderExistingBrandsInModal();
+        newBrandInput.value = "";
+    } catch (error) {
+        console.error("Marka əlavə edilərkən xəta: ", error);
+        showNotification("Xəta baş verdi!", "error");
+    }
+});
+
+function setupBrandFilterList(filter = "") {
+    brandSelectList.innerHTML = "";
+    
+    const filteredBrands = carBrands.filter(b => 
+        b.name.trim().toLowerCase().includes(filter.trim().toLowerCase())
+    );
+
+    if (filteredBrands.length === 0) {
+        brandSelectList.innerHTML = `<div style="text-align: center; color: #999; padding: 20px;">Marka tapılmadı</div>`;
+        return;
+    }
+
+    filteredBrands.forEach(b => {
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.textContent = b.name;
+        
+        const isSelected = selectedBrandFilter && selectedBrandFilter.trim().toLowerCase() === b.name.trim().toLowerCase();
+        
+        btn.style.cssText = `
+            padding: 12px 15px; 
+            background-color: #222; 
+            color: ${isSelected ? '#3b82f6' : '#fff'}; 
+            border: 2px solid ${isSelected ? '#3b82f6' : '#333'}; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            text-align: left; 
+            font-size: 14px; 
+            transition: background 0.2s, border-color 0.2s;
+        `;
+
+        btn.addEventListener('mouseenter', () => btn.style.backgroundColor = '#2c2c2c');
+        btn.addEventListener('mouseleave', () => btn.style.backgroundColor = '#222');
+        
+        btn.addEventListener('click', () => {
+            selectedBrandFilter = b.name;
+            filterByBrandBtn.textContent = `${b.name}`;
+            clearBrandFilter.style.display = "block";
+            closeModal(brandSelectModal);
+            filterKeys();
+            showNotification(`${b.name} seçildi`, "success");
+        });
+        
+        brandSelectList.appendChild(btn);
+    });
+}
+
+clearBrandFilter.addEventListener('click', () => {
+    selectedBrandFilter = null;
+    filterByBrandBtn.textContent = "Marka seç";
+    clearBrandFilter.style.display = "none";
+    closeModal(brandSelectModal);
+    filterKeys();
+    showNotification("Seçim sıfırlandı", "success");
+});
+
+brandSelectModal.addEventListener('click', (e) => {
+    if (e.target === brandSelectModal) closeModal(brandSelectModal);
+});
+
+filterBrandSearchInput.addEventListener('input', (e) => {
+    setupBrandFilterList(e.target.value);
+});
+
+choiceModal.addEventListener('click', (e) => {
+    if (e.target === choiceModal) closeModal(choiceModal);
+});
+
+brandAddModal.addEventListener('click', (e) => {
+    if (e.target === brandAddModal) closeModal(brandAddModal);
+});
+
+brandInput.addEventListener('click', async () => {
+    await fetchBrandsFromFirebase();
+    brandSearchInput.value = "";
+    setupKeyBrandSelectList();
+    openModal(keyBrandSelectModal);
+});
+
+function setupKeyBrandSelectList(filter = "") {
+    keyBrandSelectList.innerHTML = "";
+    
+    const filteredBrands = carBrands.filter(b => 
+        b.name.trim().toLowerCase().includes(filter.trim().toLowerCase())
+    );
+
+    if (filteredBrands.length === 0) {
+        keyBrandSelectList.innerHTML = `<div style="text-align: center; color: #999; padding: 20px;">Marka tapılmadı</div>`;
+        return;
+    }
+
+    filteredBrands.forEach(b => {
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.textContent = b.name;
+        btn.style.cssText = "padding: 12px 15px; background-color: #2a2a2a; color: #fff; border: 1px solid #333; border-radius: 8px; cursor: pointer; text-align: left; font-size: 14px; transition: background 0.2s;";
+        
+        btn.addEventListener('mouseenter', () => btn.style.backgroundColor = '#3a3a3a');
+        btn.addEventListener('mouseleave', () => btn.style.backgroundColor = '#2a2a2a');
+        
+        btn.addEventListener('click', () => {
+            brandInput.value = b.name;
+            closeModal(keyBrandSelectModal);
+        });
+        keyBrandSelectList.appendChild(btn);
+    });
+}
+
+keyBrandSelectModal.addEventListener('click', (e) => {
+    if (e.target === keyBrandSelectModal) closeModal(keyBrandSelectModal);
+});
+
+brandSearchInput.addEventListener('input', (e) => {
+    setupKeyBrandSelectList(e.target.value);
+});
+
+function renderExistingBrandsInModal() {
+    const listContainer = document.getElementById('existingBrandsList');
+    if (!listContainer) return;
+    
+    listContainer.innerHTML = "";
+    if (carBrands.length === 0) {
+        listContainer.innerHTML = `<span style="font-size: 12px; color: #666;">Hələ marka əlavə olunmayıb</span>`;
+        return;
+    }
+
+    carBrands.forEach(b => {
+        const tag = document.createElement('div');
+        tag.style.cssText = "background-color: #222; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: #fff; border: 1px solid #333; display: flex; align-items: center; justify-content: space-between; gap: 10px;";
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = b.name;
+        nameSpan.style.flex = "1";
+        tag.appendChild(nameSpan);
+
+        const editBtn = document.createElement('button');
+        editBtn.type = "button";
+        editBtn.textContent = "✏️";
+        // Düyməyə çərçivə (border), fon və səliqəli görünüş əlavə olundu
+        editBtn.style.cssText = "background: #1a1a1a; border: 1px solid #333; border-radius: 6px; cursor: pointer; font-size: 14px; padding: 6px 8px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;";
+        editBtn.title = "Adını dəyiş";
+        
+        editBtn.addEventListener('mouseenter', () => editBtn.style.backgroundColor = '#333');
+        editBtn.addEventListener('mouseleave', () => editBtn.style.backgroundColor = '#1a1a1a');
+
+        editBtn.onclick = () => {
+            const editBrandForm = document.getElementById('editBrandForm');
+            const editBrandNameInput = document.getElementById('editBrandNameInput');
+
+            editBrandNameInput.value = b.name;
+            closeModal(brandAddModal);
+            openModal(editBrandModal); 
+
+            editBrandForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const newName = editBrandNameInput.value.trim();
+                if (!newName) return;
+
+                const exists = carBrands.some(item => item.name.toLowerCase() === newName.toLowerCase() && item.id !== b.id);
+                if (exists) {
+                    showNotification("Bu adla başqa marka mövcuddur!", "error");
+                    return;
+                }
+
+                try {
+                    await updateDoc(doc(db, "carBrands", b.id), { name: newName });
+                    showNotification("Marka adı yeniləndi!", "success");
+                    closeModal(editBrandModal);
+                    await fetchBrandsFromFirebase();
+                    renderExistingBrandsInModal();
+                } catch (error) {
+                    showNotification("Xəta baş verdi!", "error");
+                }
+            };
+        };
+        tag.appendChild(editBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = "button";
+        deleteBtn.textContent = "🗑️";
+        // Sil düyməsinə də eyni qaydada çərçivə və səliqəli fon əlavə olundu
+        deleteBtn.style.cssText = "background: #1a1a1a; border: 1px solid #333; border-radius: 6px; cursor: pointer; font-size: 14px; padding: 6px 8px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;";
+        deleteBtn.title = "Sil";
+        
+        deleteBtn.addEventListener('mouseenter', () => deleteBtn.style.backgroundColor = '#333');
+        deleteBtn.addEventListener('mouseleave', () => deleteBtn.style.backgroundColor = '#1a1a1a');
+
+        deleteBtn.onclick = () => {
+            showConfirm(`"${b.name}" markasını silmək istədiyinizə əminsinizmi?`, async () => {
+                try {
+                    await deleteDoc(doc(db, "carBrands", b.id));
+                    showNotification("Marka silindi!", "success");
+                    await fetchBrandsFromFirebase();
+                    renderExistingBrandsInModal();
+                } catch (error) {
+                    showNotification("Silinərkən xəta baş verdi!", "error");
+                }
+            });
+        };
+        tag.appendChild(deleteBtn);
+
+        listContainer.appendChild(tag);
+    });
+}
+
+editBrandModal.addEventListener('click', (e) => {
+    if (e.target === editBrandModal) closeModal(editBrandModal);
+});
