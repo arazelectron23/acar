@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Açar</title>
     <link rel="icon" type="image/png" href="favicon.png?v=2">
-    <link rel="stylesheet" href="style.css?v=1.8">
+    <link rel="stylesheet" href="style.css?v=2.0">
 
     <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#121212">
@@ -55,6 +55,7 @@
                     <label for="cameraInput" class="file-upload-btn" title="Kameradan şəkil çək">📷</label>
                     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
                 </div>
+                <input type="number" id="priceInput" placeholder="Qiymət (AZN)" step="0.01">
                 
                 <textarea id="noteInput" class="large-note-input" placeholder="Qeyd" rows="3"></textarea>
                 
@@ -72,11 +73,20 @@
             <h2 id="detailTitle">Marka Model</h2>
             
             <!-- Əsas məlumatlar bloku -->
-            <div class="detail-info-box">
-                <p><strong>İl:</strong> <span id="detailYears"></span></p>
-                <p><strong>Çip:</strong> <span id="detailChips"></span></p>
-            </div>
-
+          <div class="detail-info-box">
+    <div class="detail-badge-box">
+        <span class="detail-label">İl</span>
+        <span id="detailYears"></span>
+    </div>
+    <div class="detail-badge-box" id="detailChipsContainer">
+        <span class="detail-label">Çip</span>
+        <span id="detailChips">İD</span>
+    </div>
+    <div class="detail-badge-box" id="detailPriceContainer">
+        <span class="detail-label">Qiymət</span>
+        <span><span id="detailPrice"></span> AZN</span>
+    </div>
+</div>
             <!-- Sirf qeyd üçün ayrılmış ikinci blok -->
 <div id="detailNoteContainer" class="detail-note-box" style="display: none; position: relative;">
     <div class="note-label">📝 Qeyd:</div>
@@ -186,7 +196,7 @@
 
     <!-- JavaScript faylları -->
     <script type="module" src="firebase.js"></script>
-    <script type="module" src="app.js?v=1.8"></script>
+    <script type="module" src="app.js?v=2.0"></script>
 
    <script>
     if ('serviceWorker' in navigator) {

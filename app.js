@@ -36,6 +36,8 @@ const keyBrandSelectModal = document.getElementById('keyBrandSelectModal');
 const keyBrandSelectList = document.getElementById('keyBrandSelectList');
 const brandSearchInput = document.getElementById('brandSearchInput');
 const filterBrandSearchInput = document.getElementById('filterBrandSearchInput');
+const priceInput = document.getElementById('priceInput');
+const detailPrice = document.getElementById('detailPrice');
 
 // Toast Bildiriş Sistemi
 function showNotification(message, type = 'success') {
@@ -143,32 +145,59 @@ function displayKeys(keys) {
     }
 
     keys.forEach(key => {
-        const card = document.createElement('div');
-        card.className = 'key-card';
-        card.innerHTML = `
-            <img src="${key.image}" alt="${key.brand} ${key.model}" class="key-image">
-            <div class="key-info">
-                <div class="key-title">${key.brand} ${key.model}</div>
-                <div class="key-details">İl: ${key.years}</div>
-                <span class="key-badge">${key.chips || 'Yoxdur'}</span>
-            </div>
-        `;
+    const card = document.createElement('div');
+    card.className = 'key-card';
+    
+    // Çip şərti
+    const chipsHtml = key.chips && key.chips.trim() !== "" ? `<span class="key-badge">ID ${key.chips}</span>` : '';
+    // Qiymət şərti (Əgər qiymət yazılıbsa göstərsin)
+    const priceHtml = key.price && key.price.trim() !== "" ? `<span style="font-size: 13px; font-weight: bold; color: #10b981;">${key.price} AZN</span>` : '';
 
-        card.addEventListener('click', () => {
-            currentSelectedKeyId = key.id;
-            detailImage.src = key.image;
-            detailTitle.textContent = `${key.brand} ${key.model}`;
-            detailYears.textContent = key.years;
-            detailChips.textContent = key.chips || 'Yoxdur';
-            
-            if (key.note && key.note.trim() !== "") {
-                detailNote.textContent = key.note;
-                detailNoteContainer.style.display = "block";
-            } else {
-                detailNoteContainer.style.display = "none";
-            }
-            openModal(detailModal);
-        });
+    card.innerHTML = `
+        <img src="${key.image}" alt="${key.brand} ${key.model}" class="key-image">
+        <div class="key-info">
+            <div class="key-title">${key.brand} ${key.model}</div>
+            <div class="key-details">İl: ${key.years}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                ${chipsHtml}
+                ${priceHtml}
+            </div>
+        </div>
+    `;
+
+   card.addEventListener('click', () => {
+    currentSelectedKeyId = key.id;
+    detailImage.src = key.image;
+    detailTitle.textContent = `${key.brand} ${key.model}`;
+    detailYears.textContent = key.years;
+    
+    // Çip qutusu
+    const chipsContainer = document.getElementById('detailChipsContainer');
+    if (key.chips && key.chips.trim() !== "") {
+        detailChips.textContent = "ID " + key.chips;
+        chipsContainer.style.display = "flex";
+    } else {
+        chipsContainer.style.display = "none";
+    }
+    
+    // Qiymət qutusu
+    const priceContainer = document.getElementById('detailPriceContainer');
+    if (key.price && key.price.trim() !== "") {
+        detailPrice.textContent = key.price;
+        priceContainer.style.display = "flex";
+    } else {
+        priceContainer.style.display = "none";
+    }
+
+    if (key.note && key.note.trim() !== "") {
+        detailNote.textContent = key.note;
+        detailNoteContainer.style.display = "block";
+    } else {
+        detailNoteContainer.style.display = "none";
+    }
+    
+    openModal(detailModal);
+});
         keyContainer.appendChild(card);
     });
 }
@@ -244,6 +273,7 @@ editKeyBtn.addEventListener('click', () => {
     document.getElementById('modelInput').value = keyData.model;
     document.getElementById('yearsInput').value = keyData.years;
     document.getElementById('chipsInput').value = keyData.chips || "";
+    document.getElementById('priceInput').value = keyData.price || "";
     document.getElementById('imageInput').value = keyData.image;
     document.getElementById('noteInput').value = keyData.note || "";
     editKeyIdInput.value = keyData.id;
@@ -275,53 +305,46 @@ deleteKeyBtn.addEventListener('click', () => {
 addKeyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const saveBtn = addKeyForm.querySelector('button[type="submit"]');
-    saveBtn.classList.add('btn-loading');
-    saveBtn.disabled = true;
+    const brand = document.getElementById('brandInput').value.trim();
+    const model = document.getElementById('modelInput').value.trim();
+    const years = document.getElementById('yearsInput').value.trim();
+    const chips = document.getElementById('chipsInput').value.trim();
+    const image = document.getElementById('imageInput').value.trim();
+    const price = document.getElementById('priceInput').value.trim(); // Qiyməti buradan götürürük
+    const note = document.getElementById('noteInput').value.trim();
+    const editKeyId = editKeyIdInput.value;
 
-    const editId = editKeyIdInput.value;
-    const brandVal = document.getElementById('brandInput').value.trim();
-    const modelVal = document.getElementById('modelInput').value.trim();
-    const yearsVal = document.getElementById('yearsInput').value.trim();
-    const chipsVal = document.getElementById('chipsInput').value.trim();
-    const imageVal = document.getElementById('imageInput').value.trim();
-    const noteVal = document.getElementById('noteInput').value.trim();
-
-    if (!brandVal || !modelVal || !yearsVal || !imageVal) {
-        showNotification("Zəhmət olmasa vacib xanaları doldurun!", "error");
-        saveBtn.classList.remove('btn-loading');
-        saveBtn.disabled = false;
+    if (!brand || !model || !years || !image) {
+        showNotification("Zəhmət olmasa tələb olunan xanaları doldurun!", "error");
         return;
     }
 
     const keyData = {
-        brand: brandVal,
-        model: modelVal,
-        years: yearsVal,
-        chips: chipsVal,
-        image: imageVal,
-        note: noteVal
+        brand,
+        model,
+        years,
+        chips,
+        image,
+        price, // Bazaya yazılacaq obyektə əlavə edilibmi?
+        note: note || ""
     };
 
     try {
-        if (editId) {
-            const keyRef = doc(db, "carKeys", editId);
-            await updateDoc(keyRef, keyData);
+        if (editKeyId) {
+            // Mövcud açarı yenilə
+            await updateDoc(doc(db, "carKeys", editKeyId), keyData);
             showNotification("Açar uğurla yeniləndi!", "success");
         } else {
+            // Yeni açar əlavə et
             await addDoc(collection(db, "carKeys"), keyData);
-            showNotification("Yeni açar əlavə olundu!", "success");
+            showNotification("Açar uğurla əlavə olundu!", "success");
         }
 
-        addKeyForm.reset();
         closeModal(keyModal);
         await fetchKeysFromFirebase();
     } catch (error) {
-        console.error("Firebase xətası: ", error);
-        showNotification("Xəta baş verdi, məlumat yazılmadı!", "error");
-    } finally {
-        saveBtn.classList.remove('btn-loading');
-        saveBtn.disabled = false;
+        console.error("Xəta baş verdi: ", error);
+        showNotification("Əməliyyat uğursuz oldu!", "error");
     }
 });
 
