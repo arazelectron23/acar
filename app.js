@@ -148,9 +148,7 @@ function displayKeys(keys) {
     const card = document.createElement('div');
     card.className = 'key-card';
     
-    // Çip şərti
     const chipsHtml = key.chips && key.chips.trim() !== "" ? `<span class="key-badge">ID ${key.chips}</span>` : '';
-    // Qiymət şərti (Əgər qiymət yazılıbsa göstərsin)
     const priceHtml = key.price && key.price.trim() !== "" ? `<span style="font-size: 13px; font-weight: bold; color: #10b981;">${key.price} AZN</span>` : '';
 
     card.innerHTML = `
@@ -171,7 +169,6 @@ function displayKeys(keys) {
     detailTitle.textContent = `${key.brand} ${key.model}`;
     detailYears.textContent = key.years;
     
-    // Çip qutusu
     const chipsContainer = document.getElementById('detailChipsContainer');
     if (key.chips && key.chips.trim() !== "") {
         detailChips.textContent = "ID " + key.chips;
@@ -180,7 +177,6 @@ function displayKeys(keys) {
         chipsContainer.style.display = "none";
     }
     
-    // Qiymət qutusu
     const priceContainer = document.getElementById('detailPriceContainer');
     if (key.price && key.price.trim() !== "") {
         detailPrice.textContent = key.price;
@@ -221,8 +217,6 @@ function filterKeys() {
 
 filterByBrandBtn.addEventListener('click', async () => {
     filterBrandSearchInput.value = ""; 
-    await fetchBrandsFromFirebase();
-    setupBrandFilterList();
     
     if (selectedBrandFilter) {
         clearBrandFilter.style.display = "block";
@@ -231,17 +225,54 @@ filterByBrandBtn.addEventListener('click', async () => {
     }
     
     openModal(brandSelectModal);
+    setupBrandFilterList(); 
+    
+    await fetchBrandsFromFirebase();
+    setupBrandFilterList(filterBrandSearchInput.value);
 });
+
+// Şəkli sıxıb Base64 (mətn) formatına çevirən köməkçi funksiya
+function convertImageToBase64(file, maxWidth = 600, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = (err) => reject(err);
+            img.src = event.target.result;
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
+    });
+}
 
 imageFileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    showNotification("Şəkil buluta yüklənir...", "success");
+    showNotification("Şəkil emal edilir...", "success");
     try {
-        const imageUrl = await uploadImageToImgBB(file);
-        imageInput.value = imageUrl;
-        showNotification("Şəkil uğurla yükləndi!", "success");
+        const base64String = await convertImageToBase64(file);
+        imageInput.value = base64String;
+        showNotification("Şəkil hazırlandı!", "success");
     } catch (error) {
         showNotification("Şəkil yüklənə bilmədi!", "error");
     }
@@ -251,11 +282,11 @@ cameraInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    showNotification("Kamera şəkli buluta yüklənir...", "success");
+    showNotification("Kamera şəkli emal edilir...", "success");
     try {
-        const imageUrl = await uploadImageToImgBB(file);
-        imageInput.value = imageUrl;
-        showNotification("Şəkil uğurla yükləndi!", "success");
+        const base64String = await convertImageToBase64(file);
+        imageInput.value = base64String;
+        showNotification("Şəkil hazırlandı!", "success");
     } catch (error) {
         showNotification("Şəkil yüklənə bilmədi!", "error");
     }
@@ -310,7 +341,7 @@ addKeyForm.addEventListener('submit', async (e) => {
     const years = document.getElementById('yearsInput').value.trim();
     const chips = document.getElementById('chipsInput').value.trim();
     const image = document.getElementById('imageInput').value.trim();
-    const price = document.getElementById('priceInput').value.trim(); // Qiyməti buradan götürürük
+    const price = document.getElementById('priceInput').value.trim();
     const note = document.getElementById('noteInput').value.trim();
     const editKeyId = editKeyIdInput.value;
 
@@ -325,17 +356,15 @@ addKeyForm.addEventListener('submit', async (e) => {
         years,
         chips,
         image,
-        price, // Bazaya yazılacaq obyektə əlavə edilibmi?
+        price,
         note: note || ""
     };
 
     try {
         if (editKeyId) {
-            // Mövcud açarı yenilə
             await updateDoc(doc(db, "carKeys", editKeyId), keyData);
             showNotification("Açar uğurla yeniləndi!", "success");
         } else {
-            // Yeni açar əlavə et
             await addDoc(collection(db, "carKeys"), keyData);
             showNotification("Açar uğurla əlavə olundu!", "success");
         }
@@ -393,7 +422,7 @@ window.addEventListener('popstate', () => {
         closeModal(brandAddModal);
     }else if (editBrandModal.classList.contains('active')) {
         closeModal(editBrandModal);
-        brandAddModal.classList.add('active'); // Geri düyməsi ilə bağlandıqda arxadakı pəncərəni bərpa et
+        brandAddModal.classList.add('active');
     }
 });
 
@@ -464,29 +493,6 @@ editNoteForm.addEventListener('submit', async (e) => {
     }
 });
 
-async function uploadImageToImgBB(file) {
-    const apiKey = "4051df84ed1e0dbe5f13f79db310ca45";
-    const formData = new FormData();
-    formData.append("image", file);
-
-    try {
-        const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-            method: "POST",
-            body: formData
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            return data.data.url;
-        } else {
-            throw new Error("ImgBB yükləmə uğursuz oldu");
-        }
-    } catch (error) {
-        console.error("Şəkil yüklənmə xətası:", error);
-        throw error;
-    }
-}
-
 const choiceModal = document.getElementById('choiceModal');
 const chooseAddBrand = document.getElementById('chooseAddBrand');
 const chooseAddKey = document.getElementById('chooseAddKey');
@@ -512,15 +518,17 @@ async function fetchBrandsFromFirebase() {
 chooseAddBrand.addEventListener('click', async () => {
     closeModal(choiceModal);
     newBrandInput.value = "";
-    await fetchBrandsFromFirebase();
     renderExistingBrandsInModal();
     openModal(brandAddModal);
+    
+    await fetchBrandsFromFirebase();
+    renderExistingBrandsInModal();
 });
 
 chooseAddKey.addEventListener('click', () => {
     closeModal(choiceModal);
     
-    modalTitle.textContent = "Yeni Açar Əlavə Et";
+    modalTitle.textContent = "Yeni Açar";
     saveBtnText.textContent = "Yadda Saxla";
     editKeyIdInput.value = "";
     addKeyForm.reset();
@@ -546,7 +554,7 @@ addBrandForm.addEventListener('submit', async (e) => {
 
     try {
         await addDoc(collection(db, "carBrands"), { name: brandName });
-        showNotification("Marka uğurla əlavə olundu!", "success");
+        showNotification("Marka əlavə olundu!", "success");
         await fetchBrandsFromFirebase();
         renderExistingBrandsInModal();
         newBrandInput.value = "";
@@ -629,10 +637,12 @@ brandAddModal.addEventListener('click', (e) => {
 });
 
 brandInput.addEventListener('click', async () => {
-    await fetchBrandsFromFirebase();
     brandSearchInput.value = "";
-    setupKeyBrandSelectList();
     openModal(keyBrandSelectModal);
+    setupKeyBrandSelectList();
+    
+    await fetchBrandsFromFirebase();
+    setupKeyBrandSelectList(brandSearchInput.value);
 });
 
 function setupKeyBrandSelectList(filter = "") {
@@ -694,7 +704,6 @@ function renderExistingBrandsInModal() {
         const editBtn = document.createElement('button');
         editBtn.type = "button";
         editBtn.textContent = "✏️";
-        // Düyməyə çərçivə (border), fon və səliqəli görünüş əlavə olundu
         editBtn.style.cssText = "background: #1a1a1a; border: 1px solid #333; border-radius: 6px; cursor: pointer; font-size: 14px; padding: 6px 8px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;";
         editBtn.title = "Adını dəyiş";
         
@@ -706,8 +715,6 @@ function renderExistingBrandsInModal() {
             const editBrandNameInput = document.getElementById('editBrandNameInput');
 
             editBrandNameInput.value = b.name;
-            
-            // Arxadakı modalı dərhal gizlədirik
             brandAddModal.classList.remove('active');
             openModal(editBrandModal); 
 
@@ -726,7 +733,6 @@ function renderExistingBrandsInModal() {
                     await updateDoc(doc(db, "carBrands", b.id), { name: newName });
                     showNotification("Marka adı yeniləndi!", "success");
                     
-                    // Modalı bağlayıb arxadakını qaytarırıq
                     closeModal(editBrandModal);
                     brandAddModal.classList.add('active');
                     
@@ -742,7 +748,6 @@ function renderExistingBrandsInModal() {
         const deleteBtn = document.createElement('button');
         deleteBtn.type = "button";
         deleteBtn.textContent = "🗑️";
-        // Sil düyməsinə də eyni qaydada çərçivə və səliqəli fon əlavə olundu
         deleteBtn.style.cssText = "background: #1a1a1a; border: 1px solid #333; border-radius: 6px; cursor: pointer; font-size: 14px; padding: 6px 8px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;";
         deleteBtn.title = "Sil";
         
@@ -770,28 +775,35 @@ function renderExistingBrandsInModal() {
 editBrandModal.addEventListener('click', (e) => {
     if (e.target === editBrandModal) {
         closeModal(editBrandModal);
-        brandAddModal.classList.add('active'); // Kənara basıb bağlayanda arxadakı qayıtsın
+        brandAddModal.classList.add('active');
     }
 });
 
-// Mobil klaviatura və ekran dəyişikliklərini izləmək üçün
 if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', () => {
-        // Əgər viewport hündürlüyü ümumi hündürlükdən nəzərəçarpacaq dərəcədə kiçilibsə
+    const handleViewportChange = () => {
         const isKeyboardOpen = window.visualViewport.height < window.innerHeight - 150;
         
         document.querySelectorAll('.modal-overlay.active').forEach(modal => {
             modal.classList.toggle('keyboard-open', isKeyboardOpen);
+            if (isKeyboardOpen) {
+                modal.style.top = `${window.visualViewport.offsetTop}px`;
+                modal.style.height = `${window.visualViewport.height}px`;
+            } else {
+                modal.style.top = '0px';
+                modal.style.height = '100%';
+            }
         });
-    });
+    };
+
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', handleViewportChange);
 } else {
-    // Köhnə brauzerlər üçün ehtiyat mexanizm
     const initialHeight = window.innerHeight;
     window.addEventListener('resize', () => {
         const isKeyboardOpen = window.innerHeight < initialHeight - 150;
         document.querySelectorAll('.modal-overlay.active').forEach(modal => {
             modal.classList.toggle('keyboard-open', isKeyboardOpen);
+            modal.style.height = isKeyboardOpen ? `${window.innerHeight}px` : '100%';
         });
     });
 }
-
