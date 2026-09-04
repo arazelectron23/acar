@@ -368,8 +368,9 @@ window.addEventListener('popstate', () => {
         closeModal(choiceModal);
     } else if (brandAddModal.classList.contains('active')) {
         closeModal(brandAddModal);
-    } else if (editBrandModal.classList.contains('active')) {
+    }else if (editBrandModal.classList.contains('active')) {
         closeModal(editBrandModal);
+        brandAddModal.classList.add('active'); // Geri düyməsi ilə bağlandıqda arxadakı pəncərəni bərpa et
     }
 });
 
@@ -556,7 +557,7 @@ function setupBrandFilterList(filter = "") {
             background-color: #222; 
             color: ${isSelected ? '#3b82f6' : '#fff'}; 
             border: 2px solid ${isSelected ? '#3b82f6' : '#333'}; 
-            border-radius: 8px; 
+            border-radius: 15px; 
             cursor: pointer; 
             text-align: left; 
             font-size: 14px; 
@@ -677,12 +678,14 @@ function renderExistingBrandsInModal() {
         editBtn.addEventListener('mouseenter', () => editBtn.style.backgroundColor = '#333');
         editBtn.addEventListener('mouseleave', () => editBtn.style.backgroundColor = '#1a1a1a');
 
-        editBtn.onclick = () => {
+       editBtn.onclick = () => {
             const editBrandForm = document.getElementById('editBrandForm');
             const editBrandNameInput = document.getElementById('editBrandNameInput');
 
             editBrandNameInput.value = b.name;
-            closeModal(brandAddModal);
+            
+            // Arxadakı modalı dərhal gizlədirik
+            brandAddModal.classList.remove('active');
             openModal(editBrandModal); 
 
             editBrandForm.onsubmit = async (e) => {
@@ -699,7 +702,11 @@ function renderExistingBrandsInModal() {
                 try {
                     await updateDoc(doc(db, "carBrands", b.id), { name: newName });
                     showNotification("Marka adı yeniləndi!", "success");
+                    
+                    // Modalı bağlayıb arxadakını qaytarırıq
                     closeModal(editBrandModal);
+                    brandAddModal.classList.add('active');
+                    
                     await fetchBrandsFromFirebase();
                     renderExistingBrandsInModal();
                 } catch (error) {
@@ -720,7 +727,7 @@ function renderExistingBrandsInModal() {
         deleteBtn.addEventListener('mouseleave', () => deleteBtn.style.backgroundColor = '#1a1a1a');
 
         deleteBtn.onclick = () => {
-            showConfirm(`"${b.name}" markasını silmək istədiyinizə əminsinizmi?`, async () => {
+            showConfirm(`Təsdiq`, async () => {
                 try {
                     await deleteDoc(doc(db, "carBrands", b.id));
                     showNotification("Marka silindi!", "success");
@@ -738,5 +745,30 @@ function renderExistingBrandsInModal() {
 }
 
 editBrandModal.addEventListener('click', (e) => {
-    if (e.target === editBrandModal) closeModal(editBrandModal);
+    if (e.target === editBrandModal) {
+        closeModal(editBrandModal);
+        brandAddModal.classList.add('active'); // Kənara basıb bağlayanda arxadakı qayıtsın
+    }
 });
+
+// Mobil klaviatura və ekran dəyişikliklərini izləmək üçün
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        // Əgər viewport hündürlüyü ümumi hündürlükdən nəzərəçarpacaq dərəcədə kiçilibsə
+        const isKeyboardOpen = window.visualViewport.height < window.innerHeight - 150;
+        
+        document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+            modal.classList.toggle('keyboard-open', isKeyboardOpen);
+        });
+    });
+} else {
+    // Köhnə brauzerlər üçün ehtiyat mexanizm
+    const initialHeight = window.innerHeight;
+    window.addEventListener('resize', () => {
+        const isKeyboardOpen = window.innerHeight < initialHeight - 150;
+        document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+            modal.classList.toggle('keyboard-open', isKeyboardOpen);
+        });
+    });
+}
+
